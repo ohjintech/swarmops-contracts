@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+// Binary WebSocket frames between the console and the telemetry gateway.
+package swarmops.realtime.v1;
+
+import "google/protobuf/timestamp.proto";
+import "swarmops/drone/v1/drone.proto";
+
+// Map viewport the client is looking at. The gateway only sends drones inside it.
+message Viewport {
+  double min_lat = 1;
+  double min_lon = 2;
+  double max_lat = 3;
+  double max_lon = 4;
+}
+
+message ClientFrame {
+  oneof frame {
+    Viewport viewport = 1;
+  }
+}
+
+message FleetSnapshot {
+  google.protobuf.Timestamp ts = 1;
+  repeated swarmops.drone.v1.Telemetry drones = 2;
+  // Total drones known to the gateway, including those outside the viewport.
+  uint32 total_drones = 3;
+}
+
+message ServerFrame {
+  oneof frame {
+    FleetSnapshot snapshot = 1;
+    swarmops.drone.v1.CommandAck ack = 2;
+    swarmops.drone.v1.DroneEvent event = 3;
+  }
+}

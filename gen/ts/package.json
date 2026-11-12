@@ -1,0 +1,39 @@
+{
+  "name": "@swarmops/contracts",
+  "version": "0.1.0",
+  "description": "Generated protobuf-es types and service descriptors for SwarmOps",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist"],
+  "exports": {
+    "./drone/v1": {
+      "types": "./dist/swarmops/drone/v1/drone_pb.d.ts",
+      "default": "./dist/swarmops/drone/v1/drone_pb.js"
+    },
+    "./realtime/v1": {
+      "types": "./dist/swarmops/realtime/v1/realtime_pb.d.ts",
+      "default": "./dist/swarmops/realtime/v1/realtime_pb.js"
+    },
+    "./control/v1": {
+      "types": "./dist/swarmops/control/v1/control_pb.d.ts",
+      "default": "./dist/swarmops/control/v1/control_pb.js"
+    },
+    "./planner/v1": {
+      "types": "./dist/swarmops/planner/v1/planner_pb.d.ts",
+      "default": "./dist/swarmops/planner/v1/planner_pb.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@bufbuild/protobuf": "^2.5.2"
+  },
+  "devDependencies": {
+    "@bufbuild/protobuf": "2.5.2",
+    "typescript": "5.8.3"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

@@ -1,0 +1,6 @@
+node_modules/
+gen/ts/dist/
+gen/python/dist/
+__pycache__/
+*.egg-info/
+.DS_Store

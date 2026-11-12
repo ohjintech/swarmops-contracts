@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+// Internal planning service (Python, gRPC). Called by control-api, never by browsers.
+package swarmops.planner.v1;
+
+import "swarmops/drone/v1/drone.proto";
+
+service PlannerService {
+  // Split a survey polygon into lawnmower routes, one per drone.
+  rpc PlanSurvey(PlanSurveyRequest) returns (PlanSurveyResponse);
+}
+
+message DroneStart {
+  string drone_id = 1;
+  swarmops.drone.v1.Position position = 2;
+}
+
+message PlanSurveyRequest {
+  // Polygon vertices (lat/lon only; alt ignored). Need not be closed.
+  repeated swarmops.drone.v1.Position polygon = 1;
+  repeated DroneStart drones = 2;
+  // Distance between sweep lines.
+  double line_spacing_m = 3;
+  double altitude_m = 4;
+}
+
+message DroneRoute {
+  string drone_id = 1;
+  repeated swarmops.drone.v1.Position waypoints = 2;
+  double length_m = 3;
+}
+
+message PlanSurveyResponse {
+  repeated DroneRoute routes = 1;
+}

@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+// Operator-facing control API (served by swarmops-backend control-api via Connect-RPC).
+package swarmops.control.v1;
+
+import "google/protobuf/timestamp.proto";
+import "swarmops/drone/v1/drone.proto";
+
+service FleetService {
+  rpc ListDrones(ListDronesRequest) returns (ListDronesResponse);
+  rpc GetDrone(GetDroneRequest) returns (GetDroneResponse);
+  rpc SendCommand(SendCommandRequest) returns (SendCommandResponse);
+  rpc GetCommand(GetCommandRequest) returns (GetCommandResponse);
+}
+
+message DroneSummary {
+  swarmops.drone.v1.Telemetry latest = 1;
+  // True when the last telemetry is older than the staleness threshold.
+  bool stale = 2;
+}
+
+message ListDronesRequest {
+  // Optional filter; empty means all fleets.
+  string fleet_id = 1;
+}
+
+message ListDronesResponse {
+  repeated DroneSummary drones = 1;
+}
+
+message GetDroneRequest {
+  string drone_id = 1;
+}
+
+message GetDroneResponse {
+  DroneSummary drone = 1;
+}
+
+// Lifecycle tracked by the control API:
+// QUEUED -> SENT -> ACKED -> COMPLETED
+//                 \-> REJECTED | FAILED | TIMED_OUT
+enum CommandStatus {
+  COMMAND_STATUS_UNSPECIFIED = 0;
+  COMMAND_STATUS_QUEUED = 1;
+  COMMAND_STATUS_SENT = 2;
+  COMMAND_STATUS_ACKED = 3;
+  COMMAND_STATUS_COMPLETED = 4;
+  COMMAND_STATUS_REJECTED = 5;
+  COMMAND_STATUS_FAILED = 6;
+  COMMAND_STATUS_TIMED_OUT = 7;
+}
+
+message CommandRecord {
+  string command_id = 1;
+  string drone_id = 2;
+  CommandStatus status = 3;
+  string reason = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message SendCommandRequest {
+  string drone_id = 1;
+  // command_id / drone_id / timestamps inside are ignored and filled by the server.
+  swarmops.drone.v1.Command command = 2;
+  // Retrying with the same key returns the original command instead of sending twice.
+  string idempotency_key = 3;
+}
+
+message SendCommandResponse {
+  CommandRecord command = 1;
+}
+
+message GetCommandRequest {
+  string command_id = 1;
+}
+
+message GetCommandResponse {
+  CommandRecord command = 1;
+}

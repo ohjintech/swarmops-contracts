@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+// Messages exchanged between drones (real or simulated) and the backend over MQTT.
+//
+// Topic conventions (see TOPICS.md):
+//   swarm/v1/{fleet_id}/{drone_id}/telemetry   Telemetry      drone -> backend  QoS 0
+//   swarm/v1/{fleet_id}/{drone_id}/cmd         Command        backend -> drone  QoS 1
+//   swarm/v1/{fleet_id}/{drone_id}/ack         CommandAck     drone -> backend  QoS 1
+//   swarm/v1/{fleet_id}/{drone_id}/event       DroneEvent     drone -> backend  QoS 1
+package swarmops.drone.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// WGS84 position. Altitude is metres above the launch point (AGL-ish).
+message Position {
+  double lat = 1;
+  double lon = 2;
+  double alt_m = 3;
+}
+
+enum FlightState {
+  FLIGHT_STATE_UNSPECIFIED = 0;
+  FLIGHT_STATE_LANDED = 1;
+  FLIGHT_STATE_TAKING_OFF = 2;
+  FLIGHT_STATE_HOLDING = 3;
+  FLIGHT_STATE_EN_ROUTE = 4;
+  FLIGHT_STATE_RETURNING = 5;
+  FLIGHT_STATE_LANDING = 6;
+  FLIGHT_STATE_FAULT = 7;
+}
+
+// Published periodically by every drone. Doubles as the heartbeat:
+// a drone with no telemetry for N seconds is considered "link lost".
+message Telemetry {
+  string drone_id = 1;
+  string fleet_id = 2;
+  google.protobuf.Timestamp ts = 3;
+  // Monotonic per-drone sequence number, used to detect loss / reordering.
+  uint64 seq = 4;
+  Position position = 5;
+  Position home = 6;
+  double heading_deg = 7;
+  double ground_speed_mps = 8;
+  double climb_rate_mps = 9;
+  double battery_pct = 10;
+  FlightState state = 11;
+  // 0..1 estimate of link quality as seen by the drone.
+  double link_quality = 12;
+  // Id of the command the drone is currently executing, if any.
+  string active_command_id = 13;
+}
+
+message Takeoff {
+  double alt_m = 1;
+}
+
+message GoTo {
+  Position target = 1;
+  // Optional speed override; 0 means drone default.
+  double speed_mps = 2;
+}
+
+message FollowRoute {
+  repeated Position waypoints = 1;
+  double speed_mps = 2;
+}
+
+message Hold {}
+
+message ReturnToLaunch {}
+
+message Land {}
+
+message Command {
+  string command_id = 1;
+  string drone_id = 2;
+  google.protobuf.Timestamp issued_at = 3;
+  // Drones must ignore commands whose deadline has passed.
+  google.protobuf.Timestamp expires_at = 4;
+  oneof kind {
+    Takeoff takeoff = 10;
+    GoTo go_to = 11;
+    FollowRoute follow_route = 12;
+    Hold hold = 13;
+    ReturnToLaunch return_to_launch = 14;
+    Land land = 15;
+  }
+}
+
+enum AckStatus {
+  ACK_STATUS_UNSPECIFIED = 0;
+  // Drone accepted the command and started executing it.
+  ACK_STATUS_ACCEPTED = 1;
+  // Drone refused the command (see reason).
+  ACK_STATUS_REJECTED = 2;
+  // Command finished successfully.
+  ACK_STATUS_COMPLETED = 3;
+  // Command started but could not finish (preempted, fault, ...).
+  ACK_STATUS_FAILED = 4;
+}
+
+message CommandAck {
+  string command_id = 1;
+  string drone_id = 2;
+  google.protobuf.Timestamp ts = 3;
+  AckStatus status = 4;
+  string reason = 5;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO = 1;
+  SEVERITY_WARNING = 2;
+  SEVERITY_CRITICAL = 3;
+}
+
+// Notable things a drone reports on its own (failsafe triggered, fault, ...).
+message DroneEvent {
+  string drone_id = 1;
+  google.protobuf.Timestamp ts = 2;
+  Severity severity = 3;
+  // Machine-readable code, e.g. "FAILSAFE_RTL", "BATTERY_LOW", "MOTOR_FAULT".
+  string code = 4;
+  string message = 5;
+}
